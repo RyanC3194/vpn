@@ -1,0 +1,41 @@
+Server:
+
+ssh -p 11111 cs528user@localhost
+sha256sum ./simpletun.c
+gcc -o simpletun simpletun.c -lcrypto -lssl -pthread
+sudo ./simpletun -i tun0 -s -p 8787 -d
+ifconfig | grep "inet addr"
+sh ./start
+
+Client:
+ssh -p 22222 cs528user@localhost
+sha256sum ./simpletun.c
+gcc -o simpletun simpletun.c -lcrypto -lssl -pthread
+sudo ./simpletun -i tun0 -c 192.168.15.4 -d -p 8787
+sh ./start
+
+Client2:
+ssh -p 44444 cs528user@localhost
+sha256sum ./simpletun.c
+gcc -o simpletun simpletun.c -lcrypto -lssl -pthread
+sudo ./simpletun -i tun0 -c 192.168.15.4 -d -p 8787
+sh ./start
+
+
+
+How I made it work for UDP:
+    For every packet coming from the tun interfance, I add the counter and directional bit, and then do MAC-then-Encrypt. 
+    Send the whole thing to the IP address corresponding to the VPN address
+
+
+Security:
+    Control channel security: SSL connection
+    Authentication: Only the messages (received from the internet) that has a valid HMAC-sha256 hash after decrypted will be send to tun interfance
+    Confidentiality: All messages through the internet are encrypted with AES-256
+    Reply attack: Has a counter prepanded to all the messages, so if attacker send a identical messages that has appeared before, the counter would mismatch
+    Reflection attack: On top of the counter, there is a directionality bit to prevent reflection attack. 
+
+
+Extra Credit:
+    Client can update session key and inform server to update the key
+    Client can update IV and inform server to update the IV
